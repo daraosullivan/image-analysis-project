@@ -1,14 +1,17 @@
 package com.aidenkeating.imageanalysis;
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 
-import com.aidenkeating.imageanalysis.image.BinaryImageUtil;
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
+import java.awt.image.BufferedImage;
+
+import com.aidenkeating.imageanalysis.image.ImageGrouping;
 import com.aidenkeating.imageanalysis.util.QuickUnionFind;
 
 /**
  * A utility class for analyzing groups of adjoining pixels in an image, to
- * determine whether the groups are part of a single entity and to report on
- * the number of entities within an image.
+ * determine whether the groups are part of a single entity and to report on the
+ * number of entities within an image.
  * 
  * @author aidenkeating
  */
@@ -27,49 +30,84 @@ public class ImageGroupAnalysisUtil {
 	 * 
 	 * @param image The image to analyze
 	 */
-	public static void findGroupsInImage(final BufferedImage image) {
+	public static List<ImageGrouping> findGroupsInImage(final BufferedImage image) {
 		// Initialize a QuickUnionFind struct. This is used to track which
 		// pixels are connected to which.
 		QuickUnionFind uf = new QuickUnionFind(image.getWidth()*image.getHeight());
 		// Retrieve the raster for the image.
-		WritableRaster raster = image.getRaster();
+		//WritableRaster raster = image.getRaster();
 		// Iterate through every pixel of the image, starting from the
 		// upper-left.
 		for(int row = 0; row < image.getHeight(); row++) {
 			for(int col = 0; col < image.getWidth(); col++) {
-				// Check the next pixel on the X axis, if it's also black then
-				// create a union in the QuickUnionFind so we know they're
-				// connected.
-				if (col < image.getWidth() - 1 &&
-						raster.getSample(col, row, 0) == BinaryImageUtil.COLOR_BLACK &&
-						raster.getSample(col + 1, row, 0) == BinaryImageUtil.COLOR_BLACK) {
-					uf.union(getId(row, col, image.getWidth()), getId(row, col + 1, image.getWidth()));
+				// Store some commonly used information about the pixel.
+				final int pixelRGB = image.getRGB(col, row);
+				final int nCols = image.getWidth();
+				final int nRows = image.getHeight();
+				final int pixelId = getId(row, col, nCols);
+				
+				// We only care about black pixels in this binary image.
+				if (pixelRGB != Color.BLACK.getRGB()) {
+					continue;
 				}
-				// Check the next pixel on the Y axis, if it's also black then
-				// create a union in the QuickUnionFind so we know they're
-				// connected.
-				if (row < image.getHeight() - 1 &&
-						raster.getSample(col, row, 0) == BinaryImageUtil.COLOR_BLACK &&
-						raster.getSample(col, row + 1, 0) == BinaryImageUtil.COLOR_BLACK) {
-					uf.union(getId(row, col, image.getWidth()), getId(row + 1, col, image.getWidth()));
+				// Check left.
+				if (col > 0 && pixelRGB == image.getRGB(col - 1, row)) {
+					uf.union(pixelId, getId(row, col - 1, nCols));
+				}
+				// Check right.
+				if (col < nCols - 1 && pixelRGB == image.getRGB(col + 1, row)) {
+					uf.union(pixelId, getId(row, col + 1, nCols));
+				}
+				// Check up.
+				if (row > 0 && pixelRGB == image.getRGB(col, row - 1)) {
+					uf.union(pixelId, getId(row - 1, col, nCols));
+				}
+				// Check down.
+				if (row < nRows - 1 && pixelRGB == image.getRGB(col, row + 1)) {
+					uf.union(pixelId, getId(row + 1, col, nCols));
+				}
+				// Check SE.
+				if (row < nRows - 1 && col < nCols - 1 && pixelRGB == image.getRGB(col + 1, row + 1)) {
+					uf.union(pixelId, getId(row + 1, col + 1, nCols));
+				}
+				// Check NW.
+				if (row > 0 && col > 0 && pixelRGB == image.getRGB(col - 1, row - 1)) {
+					uf.union(pixelId, getId(row - 1, col - 1, nCols));
+				}
+				// Check SW.
+				if (row > 0 && col < nCols - 1 && pixelRGB == image.getRGB(col + 1, row - 1)) {
+					uf.union(pixelId, getId(row - 1, col + 1, nCols));
+				}
+				// Check NE.
+				if (row < nRows - 1 && col > 0 && pixelRGB == image.getRGB(col - 1, row + 1)) {
+					uf.union(pixelId, getId(row + 1, col - 1, nCols));
 				}
 			}
 		}
-		// Retrieve the number of trees with noise reduction of 1. This will
-		// remove all trees with only one element in the QuickUnionFind
-		// instance, so we should only be left with larger groupings of pixels.
-		// Noise reduction can be adjusted to retrieve desired results.
-		System.out.println("Number of trees: " + uf.getNumberOfTrees(1));
 		
-		// TODO: Retrieve the top and bottom of each tree we care about and get
-		// the coordinates for it. This will allow us to draw a box around the
-		// object. Earlier parts of this function may need to be adjusted to
-		// store some extra info on pixels etc.
+		List<ImageGrouping> imageGroupings = new ArrayList<ImageGrouping>();
+		for(int root: uf.getRoots(1)) {
+			final List<Integer> treeElements = uf.getElementsOfTree(root);
+			final int firstNode = treeElements.get(0);
+			final int lastNode = treeElements.get(treeElements.size() - 1);
+
+			// Get the coordinates for the first and last pixel in the tree.
+			// These will be the first and last encountered, giving us a rough
+			// set of coordinates to draw a box.
+			final int x1 = firstNode%image.getWidth();
+			final int y1 = firstNode/image.getWidth();
+			final int x2 = lastNode%image.getWidth();
+			final int y2 = lastNode/image.getWidth();
+			
+			imageGroupings.add(new ImageGrouping(x1, y1, x2, y2));
+		}
+		
+		return imageGroupings;
 	}
-	
+
 	// Utility function for retrieving the correct array position in a
 	// QuickUnionFind for a specific pixel in an image with nCols columns.
 	private static int getId(int row, int col, int nCols) {
-		return row*nCols + col;
+		return row * nCols + col;
 	}
 }
