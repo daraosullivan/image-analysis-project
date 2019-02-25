@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class QuickUnionFind {
+public class UnionFind {
 
 	private final int N; // Number of nodes in the forest
 	private final int id[]; // The parent of node n (a node in a tree)
@@ -16,7 +16,7 @@ public class QuickUnionFind {
 	 * 
 	 * @param n Number of nodes
 	 */
-	public QuickUnionFind(int n) {
+	public UnionFind(int n) {
 		N = n;
 		id = new int[N];
 		sz = new int[N];

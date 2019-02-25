@@ -11,7 +11,7 @@ import com.aidenkeating.imageanalysis.image.FirstLastPixelImageGrouping;
 import com.aidenkeating.imageanalysis.image.GrayscaleBinaryImageFactory;
 import com.aidenkeating.imageanalysis.image.ImageGrouping;
 import com.aidenkeating.imageanalysis.image.ImageUtil;
-import com.aidenkeating.imageanalysis.util.QuickUnionFind;
+import com.aidenkeating.imageanalysis.util.UnionFind;
 
 /**
  * ImageAnalyzer is the main class a client should interact with. They should
@@ -29,11 +29,11 @@ import com.aidenkeating.imageanalysis.util.QuickUnionFind;
  *
  */
 public class ImageAnalyzer {
-	private final BinaryImageFactory binaryImageFactory;
-	private final Color outlineColor;
-	private final int noiseReduction;
+	private BinaryImageFactory binaryImageFactory;
+	private Color outlineColor;
+	private int noiseReduction;
 	// This is nullable, when null do not resize the image.
-	private final Dimension resizeDimension;
+	private Dimension resizeDimension;
 	
 	public ImageAnalyzer(final BinaryImageFactory binaryImageFactory, final Color outlineColor, final int noiseReduction, final Dimension resizeDimension) {
 		this.binaryImageFactory = binaryImageFactory;
@@ -74,7 +74,7 @@ public class ImageAnalyzer {
 	private List<ImageGrouping> findDistinctObjectsInImage(final BufferedImage image) {
 		// Initialize a QuickUnionFind struct. This is used to track which
 		// pixels are connected to which.
-		QuickUnionFind uf = new QuickUnionFind(image.getWidth()*image.getHeight());
+		UnionFind uf = new UnionFind(image.getWidth()*image.getHeight());
 		// Retrieve the raster for the image.
 		//WritableRaster raster = image.getRaster();
 		// Iterate through every pixel of the image, starting from the
@@ -166,6 +166,27 @@ public class ImageAnalyzer {
 		return resizeDimension;
 	}
 
+
+	// Generated.
+	public void setBinaryImageFactory(final BinaryImageFactory binaryImageFactory) {
+		this.binaryImageFactory = binaryImageFactory;
+	}
+
+	// Generated.
+	public void setOutlineColor(final Color outlineColor) {
+		this.outlineColor = outlineColor;
+	}
+
+	// Generated.
+	public void setNoiseReduction(final int noiseReduction) {
+		this.noiseReduction = noiseReduction;
+	}
+
+	// Generated.
+	public void setResizeDimension(final Dimension resizeDimension) {
+		this.resizeDimension = resizeDimension;
+	}
+	
 	// Utility function for retrieving the correct array position in a
 	// QuickUnionFind for a specific pixel in an image with nCols columns.
 	private static int getId(final int row, final int col, final int nCols) {
