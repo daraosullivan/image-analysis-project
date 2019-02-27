@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import com.aidenkeating.imageanalysis.ImageAnalysisReport;
 import com.aidenkeating.imageanalysis.ImageAnalyzer;
 import com.aidenkeating.imageanalysis.image.GrayscaleBinaryImageFactory;
 
@@ -24,11 +25,13 @@ import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class ImageAnalysisApplication extends Application {
 	private final FileChooser fileChooser = new FileChooser();
+	private final DirectoryChooser dirChooser = new DirectoryChooser();
 	private File file;
 	private ImageView imageView = new ImageView();
 	private GrayscaleBinaryImageFactory binaryImageFactory;
@@ -37,8 +40,8 @@ public class ImageAnalysisApplication extends Application {
 	@Override
 	public void start(Stage primaryStage) {
 		this.binaryImageFactory = new GrayscaleBinaryImageFactory(130);
-		this.imageAnalyzer = new ImageAnalyzer.Builder()
-				.withBinaryImageFactory(this.binaryImageFactory).withOutlineColor(Color.RED).build();
+		this.imageAnalyzer = new ImageAnalyzer.Builder().withBinaryImageFactory(this.binaryImageFactory)
+				.withOutlineColor(Color.RED).build();
 
 		final BorderPane mainPane = new BorderPane();
 
@@ -46,6 +49,8 @@ public class ImageAnalysisApplication extends Application {
 		final BorderPane controlPane = new BorderPane();
 		final Button imageSelectButton = buildImageSelectButton(primaryStage, fileChooser);
 		controlPane.setLeft(imageSelectButton);
+		final Button exportReportButton = buildReportExportButton(primaryStage, dirChooser);
+		controlPane.setRight(exportReportButton);
 		mainPane.setTop(controlPane);
 
 		// Setup central ImageView.
@@ -53,18 +58,18 @@ public class ImageAnalysisApplication extends Application {
 		imageView.setFitHeight(400);
 		imageView.setFitWidth(700);
 		mainPane.setCenter(imageView);
-        
+
 		// Setup sliders.
-        final BorderPane thresholdPane = new BorderPane();
-        final Label thresholdLabel = new Label("Threshold");
-        thresholdPane.setBottom(thresholdLabel);
+		final BorderPane thresholdPane = new BorderPane();
+		final Label thresholdLabel = new Label("Threshold");
+		thresholdPane.setBottom(thresholdLabel);
 		final Slider thresholdSlider = buildThresholdSlider(20);
 		thresholdPane.setCenter(thresholdSlider);
 		mainPane.setLeft(thresholdPane);
-		
+
 		final BorderPane noiseReductionPane = new BorderPane();
-        final Label noiseReductionLabel = new Label("Noise reduction");
-        noiseReductionPane.setBottom(noiseReductionLabel);
+		final Label noiseReductionLabel = new Label("Noise reduction");
+		noiseReductionPane.setBottom(noiseReductionLabel);
 		final Slider noiseReductionSlider = buildNoiseReductionSlider(1);
 		noiseReductionPane.setCenter(noiseReductionSlider);
 		mainPane.setRight(noiseReductionPane);
@@ -101,9 +106,35 @@ public class ImageAnalysisApplication extends Application {
 		});
 		return button;
 	}
+	
+	/**
+	 * Create a button for exporting an image analysis report.
+	 */
+	private Button buildReportExportButton(final Stage stage, final DirectoryChooser dirChooser) {
+		final Button button = new Button("Export report");
+		button.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				if (file != null) {
+					final File dir = dirChooser.showDialog(stage);
+					if (dir != null ) {
+						try {
+							final BufferedImage image = ImageIO.read(file);
+							final ImageAnalysisReport report = imageAnalyzer.compileReport(image);
+							exportAnalysisReportToFile(report, dir.getAbsolutePath());
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+			
+		});
+		return button;
+	}
 
 	private Slider buildThresholdSlider(final int defaultValue) {
-		final Slider slider = buildGenericSlider(defaultValue, 0, 100);
+		final Slider slider = buildGenericSlider(defaultValue, 0, 255);
 		slider.valueProperty().addListener(new ChangeListener<Number>() {
 			@Override
 			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
@@ -115,11 +146,11 @@ public class ImageAnalysisApplication extends Application {
 					e.printStackTrace();
 				}
 			}
-			
+
 		});
 		return slider;
 	}
-	
+
 	private Slider buildNoiseReductionSlider(final int defaultValue) {
 		final Slider slider = buildGenericSlider(defaultValue, 1, 100);
 		slider.valueProperty().addListener(new ChangeListener<Number>() {
@@ -133,7 +164,7 @@ public class ImageAnalysisApplication extends Application {
 					e.printStackTrace();
 				}
 			}
-			
+
 		});
 		return slider;
 	}
@@ -152,7 +183,7 @@ public class ImageAnalysisApplication extends Application {
 		slider.setOrientation(Orientation.VERTICAL);
 		return slider;
 	}
-	
+
 	/**
 	 * Refresh the image view on the screen from the contents of a file.
 	 * 
@@ -162,19 +193,16 @@ public class ImageAnalysisApplication extends Application {
 	private void setImageViewFromFile(final File file) throws IOException {
 		final BufferedImage bufferedImage = ImageIO.read(file);
 
-		final BufferedImage outlinedImage = this.imageAnalyzer.outlineDistinctObjects(bufferedImage);
+		final ImageAnalysisReport report = this.imageAnalyzer.compileReport(bufferedImage);
 
-		final Image image = SwingFXUtils.toFXImage(outlinedImage, null);
-		imageView.setImage(image);
-	}
-
-	private void setImageViewFromImage(final BufferedImage newImage) {
-		final BufferedImage outlinedImage = this.imageAnalyzer.outlineDistinctObjects(newImage);
-
-		final Image image = SwingFXUtils.toFXImage(outlinedImage, null);
+		final Image image = SwingFXUtils.toFXImage(report.getOutlinedImage(), null);
 		imageView.setImage(image);
 	}
 	
+	private void exportAnalysisReportToFile(final ImageAnalysisReport report, final String exportDir) throws IOException {
+		ImageAnalyzer.exportReportToFile(report, exportDir);
+	}
+
 	public static void main(String[] args) {
 		launch(args);
 	}

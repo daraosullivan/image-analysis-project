@@ -1,4 +1,5 @@
 package com.aidenkeating.imageanalysis.util;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -63,31 +64,31 @@ public class UnionFind {
 	public int getNumberOfTrees(final int noiseReduction) {
 		Set<Integer> s = new HashSet<Integer>();
 		for (int i = 0; i < N; i++) {
-			if(sz[i] > noiseReduction) {
+			if (sz[i] > noiseReduction) {
 				s.add(id[i]);
 			}
 		}
 		return s.size();
 	}
-	
+
 	public Set<Integer> getRoots(final int noiseReduction) {
 		Set<Integer> s = new HashSet<Integer>();
 		for (int i = 0; i < N; i++) {
-			if(sz[i] > noiseReduction) {
+			if (sz[i] > noiseReduction) {
 				s.add(root(i));
 			}
 		}
 		return s;
 	}
-	
+
 	public List<Integer> getElementsOfTree(final int node) {
 		final int rootNode = root(node);
-		if(rootNode == node && sz[node] == 1) {
+		if (rootNode == node && sz[node] == 1) {
 			return Arrays.asList(rootNode);
 		}
 		final List<Integer> treeElements = new ArrayList<Integer>();
-		for(int i = 0; i < N; i++) {
-			if(root(i) == rootNode) {
+		for (int i = 0; i < N; i++) {
+			if (root(i) == rootNode) {
 				treeElements.add(i);
 			}
 		}
