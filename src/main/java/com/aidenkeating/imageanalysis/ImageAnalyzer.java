@@ -106,7 +106,7 @@ public class ImageAnalyzer {
 		  "### Binary Image",
 		  "![Binary Image](./binary.png)",
 		  "### Outlined Image",
-		  "![Outlined Image](./outline.png)"
+		  "![Outlined Image](./outlined.png)"
 		);
 		final Path file = Paths.get(outputDir, "report.md");
 		Files.write(file, lines, Charset.forName("UTF-8"));
