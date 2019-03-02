@@ -16,10 +16,12 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import com.aidenkeating.imageanalysis.image.BinaryImageFactory;
-import com.aidenkeating.imageanalysis.image.FirstLastPixelImageGrouping;
+import com.aidenkeating.imageanalysis.image.CompleteOutlineImageGrouping;
+// import com.aidenkeating.imageanalysis.image.FirstLastPixelImageGrouping;
 import com.aidenkeating.imageanalysis.image.GrayscaleBinaryImageFactory;
 import com.aidenkeating.imageanalysis.image.ImageGrouping;
 import com.aidenkeating.imageanalysis.image.ImageUtil;
+import com.aidenkeating.imageanalysis.image.Pixel;
 import com.aidenkeating.imageanalysis.util.UnionFind;
 
 /**
@@ -28,12 +30,13 @@ import com.aidenkeating.imageanalysis.util.UnionFind;
  * Instead, this class provides one function which the end-user can invoke to
  * produce an image with outlined distinct objects.
  * 
- * As the amount of parameters we take is this class are numerous and may
- * expand over time, we use the builder pattern to help the end-user keep a
- * clean code base and also make our own lives easier.
+ * As the amount of parameters we take is this class are numerous and may expand
+ * over time, we use the builder pattern to help the end-user keep a clean code
+ * base and also make our own lives easier.
  * 
  * We could have also provided a "config object" as a single parameter if we
  * wanted.
+ * 
  * @author aidenkeating
  *
  */
@@ -43,17 +46,18 @@ public class ImageAnalyzer {
 	private int noiseReduction;
 	// This is nullable, when null do not resize the image.
 	private Dimension resizeDimension;
-	
-	public ImageAnalyzer(final BinaryImageFactory binaryImageFactory, final Color outlineColor, final int noiseReduction, final Dimension resizeDimension) {
+
+	public ImageAnalyzer(final BinaryImageFactory binaryImageFactory, final Color outlineColor,
+			final int noiseReduction, final Dimension resizeDimension) {
 		this.binaryImageFactory = binaryImageFactory;
 		this.outlineColor = outlineColor;
 		this.noiseReduction = (noiseReduction > 1 ? noiseReduction : 1);
 		this.resizeDimension = resizeDimension;
 	}
-	
+
 	/**
-	 * Locates distinct objects in a provided image and produces a new image
-	 * with them outlined.
+	 * Locates distinct objects in a provided image and produces a new image with
+	 * them outlined.
 	 * 
 	 * @param image The image to analyze
 	 * @return A scaled copy of the provided image
@@ -63,25 +67,27 @@ public class ImageAnalyzer {
 		// we can modify.
 		final BufferedImage mutableImageCopy = ImageUtil.deepCopy(image);
 		// If resizeImage is not set then use the original image.
-		// final BufferedImage resizedImage = (this.resizeDimension != null ? ImageUtil.scaleImage(mutableImageCopy, this.resizeDimension) : mutableImageCopy);
+		// final BufferedImage resizedImage = (this.resizeDimension != null ?
+		// ImageUtil.scaleImage(mutableImageCopy, this.resizeDimension) :
+		// mutableImageCopy);
 		// Produce an image with only two distinct colors, black and white.
 		final BufferedImage binaryImage = this.binaryImageFactory.produceBinaryImage(image);
 		// Retrieve a list of object groupings from the binary image.
 		final List<ImageGrouping> groupings = findDistinctObjectsInImage(binaryImage);
 		// Outline the groupings in the original color image and return it.
-		for(final ImageGrouping grouping : groupings) {
+		for (final ImageGrouping grouping : groupings) {
 			grouping.applyToImage(mutableImageCopy, this.outlineColor);
 		}
 		return new ImageAnalysisReport(image, binaryImage, mutableImageCopy, groupings);
 	}
-	
+
 	/**
 	 * Save all contents of a report to a directory, along with a Markdown file
 	 * which includes all the information in a single page.
 	 * 
-	 * @param report The report to save
+	 * @param report     The report to save
 	 * @param outputFile The directory to save to
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public static void exportReportToFile(final ImageAnalysisReport report, final String outputDir) throws IOException {
 		// Save original file
@@ -92,22 +98,14 @@ public class ImageAnalyzer {
 		ImageIO.write(report.getBinaryImage(), "png", binaryColorFile);
 		// Save outlined file
 		final File outlineFile = new File(outputDir + "/outlined.png");
-		ImageIO.write(report.getOutlinedImage(), "png", outlineFile);	
-		
-		final List<String> lines = Arrays.asList(
-		  "# Image Analysis Report",
-		  "## Metadata",
-		  String.format("* Distict Objects Detected: %s", report.getDistinctObjectCount()),
-		  String.format("* Image Width: %s", report.getOriginalImage().getWidth()),
-		  String.format("* Image Height: %s", report.getOriginalImage().getHeight()),
-		  "## Images",
-		  "### Original Image",
-		  "![Original Image](./original.png)",
-		  "### Binary Image",
-		  "![Binary Image](./binary.png)",
-		  "### Outlined Image",
-		  "![Outlined Image](./outlined.png)"
-		);
+		ImageIO.write(report.getOutlinedImage(), "png", outlineFile);
+
+		final List<String> lines = Arrays.asList("# Image Analysis Report", "## Metadata",
+				String.format("* Distict Objects Detected: %s", report.getDistinctObjectCount()),
+				String.format("* Image Width: %s", report.getOriginalImage().getWidth()),
+				String.format("* Image Height: %s", report.getOriginalImage().getHeight()), "## Images",
+				"### Original Image", "![Original Image](./original.png)", "### Binary Image",
+				"![Binary Image](./binary.png)", "### Outlined Image", "![Outlined Image](./outlined.png)");
 		final Path file = Paths.get(outputDir, "report.md");
 		Files.write(file, lines, Charset.forName("UTF-8"));
 	}
@@ -123,13 +121,13 @@ public class ImageAnalyzer {
 	private List<ImageGrouping> findDistinctObjectsInImage(final BufferedImage image) {
 		// Initialize a QuickUnionFind struct. This is used to track which
 		// pixels are connected to which.
-		UnionFind uf = new UnionFind(image.getWidth()*image.getHeight());
+		UnionFind uf = new UnionFind(image.getWidth() * image.getHeight());
 		// Retrieve the raster for the image.
-		//WritableRaster raster = image.getRaster();
+		// WritableRaster raster = image.getRaster();
 		// Iterate through every pixel of the image, starting from the
 		// upper-left.
-		for(int row = 0; row < image.getHeight(); row++) {
-			for(int col = 0; col < image.getWidth(); col++) {
+		for (int row = 0; row < image.getHeight(); row++) {
+			for (int col = 0; col < image.getWidth(); col++) {
 				// Store some commonly used information about the pixel.
 				final int pixelRGB = image.getRGB(col, row);
 				if (pixelRGB != Color.BLACK.getRGB() && pixelRGB != Color.WHITE.getRGB()) {
@@ -138,7 +136,7 @@ public class ImageAnalyzer {
 				final int nCols = image.getWidth();
 				final int nRows = image.getHeight();
 				final int pixelId = getId(row, col, nCols);
-				
+
 				// We only care about black pixels in this binary image.
 				if (pixelRGB != this.binaryImageFactory.primaryColor().getRGB()) {
 					continue;
@@ -177,24 +175,22 @@ public class ImageAnalyzer {
 				}
 			}
 		}
-		
-		List<ImageGrouping> imageGroupings = new ArrayList<ImageGrouping>();
-		for(int root: uf.getRoots(this.noiseReduction)) {
-			final List<Integer> treeElements = uf.getElementsOfTree(root);
-			final int firstNode = treeElements.get(0);
-			final int lastNode = treeElements.get(treeElements.size() - 1);
 
-			// Get the coordinates for the first and last pixel in the tree.
-			// These will be the first and last encountered, giving us a rough
-			// set of coordinates to draw a box.
-			final int x1 = firstNode%image.getWidth();
-			final int y1 = firstNode/image.getWidth();
-			final int x2 = lastNode%image.getWidth();
-			final int y2 = lastNode/image.getWidth();
-			
-			imageGroupings.add(new FirstLastPixelImageGrouping(x1, y1, x2, y2));
+		List<ImageGrouping> imageGroupings = new ArrayList<ImageGrouping>();
+		for (int root : uf.getRoots(this.noiseReduction)) {
+			final List<Pixel> pixels = new ArrayList<Pixel>();
+
+			final List<Integer> treeElements = uf.getElementsOfTree(root);
+			for (int pixelId : treeElements) {
+				pixels.add(new Pixel(pixelId % image.getWidth(), pixelId / image.getWidth()));
+			}
+
+			// Uncomment/comment these lines to switch between the two types of
+			// pixel grouping implementations.
+			// imageGroupings.add(new FirstLastPixelImageGrouping(pixels));
+			imageGroupings.add(new CompleteOutlineImageGrouping(pixels));
 		}
-		
+
 		return imageGroupings;
 	}
 
@@ -218,7 +214,6 @@ public class ImageAnalyzer {
 		return resizeDimension;
 	}
 
-
 	// Generated.
 	public void setBinaryImageFactory(final BinaryImageFactory binaryImageFactory) {
 		this.binaryImageFactory = binaryImageFactory;
@@ -238,15 +233,16 @@ public class ImageAnalyzer {
 	public void setResizeDimension(final Dimension resizeDimension) {
 		this.resizeDimension = resizeDimension;
 	}
-	
+
 	// Utility function for retrieving the correct array position in a
 	// QuickUnionFind for a specific pixel in an image with nCols columns.
 	private static int getId(final int row, final int col, final int nCols) {
 		return row * nCols + col;
 	}
-	
+
 	/**
 	 * Builder for ImageAnalyzer (Builder pattern).
+	 * 
 	 * @author aidenkeating
 	 */
 	public static class Builder {
@@ -254,7 +250,7 @@ public class ImageAnalyzer {
 		private Color outlineColor;
 		private int noiseReduction;
 		private Dimension resizeDimension;
-		
+
 		public Builder() {
 			this.binaryImageFactory = new GrayscaleBinaryImageFactory(130);
 			this.outlineColor = Color.BLUE;
@@ -263,29 +259,30 @@ public class ImageAnalyzer {
 			// analyzed.
 			this.resizeDimension = null;
 		}
-		
+
 		public Builder withBinaryImageFactory(final BinaryImageFactory factory) {
 			this.binaryImageFactory = factory;
 			return this;
 		}
-		
+
 		public Builder withOutlineColor(final Color outlineColor) {
 			this.outlineColor = outlineColor;
 			return this;
 		}
-		
+
 		public Builder withNoiseReduction(final int noiseReduction) {
 			this.noiseReduction = noiseReduction;
 			return this;
 		}
-		
+
 		public Builder withResizeDimension(final Dimension resizeDimension) {
 			this.resizeDimension = resizeDimension;
 			return this;
 		}
-		
+
 		public ImageAnalyzer build() {
-			return new ImageAnalyzer(this.binaryImageFactory, this.outlineColor, this.noiseReduction, this.resizeDimension);
+			return new ImageAnalyzer(this.binaryImageFactory, this.outlineColor, this.noiseReduction,
+					this.resizeDimension);
 		}
 	}
 }

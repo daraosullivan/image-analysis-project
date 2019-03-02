@@ -3,6 +3,7 @@ package com.aidenkeating.imageanalysis.image;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.List;
 
 /**
  * Class to define a grouping that can also project itself onto an image.
@@ -11,53 +12,29 @@ import java.awt.image.BufferedImage;
  *
  */
 public class FirstLastPixelImageGrouping implements ImageGrouping {
-	private int x1;
-	private int y1;
-	private int x2;
-	private int y2;
+	private Pixel firstPixel;
+	private Pixel lastPixel;
 
-	public FirstLastPixelImageGrouping(int x1, int y1, int x2, int y2) {
-		if (x1 < x2) {
-			this.x1 = x1;
-			this.x2 = x2;
-		} else {
-			this.x1 = x2;
-			this.x2 = x1;
+	public FirstLastPixelImageGrouping(final List<Pixel> pixels) {
+		final Pixel firstPixel = pixels.get(0);
+		final Pixel lastPixel = pixels.get(pixels.size() - 1);
+
+		if (lastPixel.getX() < firstPixel.getX()) {
+			final int tempX = firstPixel.getX();
+			firstPixel.setX(lastPixel.getX());
+			lastPixel.setX(tempX);
 		}
-		if (y1 < y2) {
-			this.y1 = y1;
-			this.y2 = y2;
-		} else {
-			this.y1 = y2;
-			this.y2 = y1;
-		}
+		this.firstPixel = firstPixel;
+		this.lastPixel = lastPixel;
 	}
 
-	public int getX1() {
-		return x1;
-	}
+	public void applyToImage(final BufferedImage image, final Color lineColor) {
+		final int outlineWidth = this.lastPixel.getX() - this.firstPixel.getX();
+		final int outlineHeight = this.lastPixel.getY() - this.firstPixel.getY();
 
-	public int getY1() {
-		return y1;
-	}
-
-	public int getX2() {
-		return x2;
-	}
-
-	public int getY2() {
-		return y2;
-	}
-
-	public void applyToImage(final BufferedImage image, final Color lineColor) {		
 		Graphics2D graphs = image.createGraphics();
 		graphs.setColor(lineColor);
-		graphs.drawRect(this.getX1(), this.getY1(), this.getX2() - this.getX1(), this.getY2() - this.getY1());
+		graphs.drawRect(this.firstPixel.getX(), this.firstPixel.getY(), outlineWidth, outlineHeight);
 		graphs.dispose();
-	}
-
-	@Override
-	public String toString() {
-		return "ImageGrouping [x1=" + x1 + ", y1=" + y1 + ", x2=" + x2 + ", y2=" + y2 + "]";
 	}
 }

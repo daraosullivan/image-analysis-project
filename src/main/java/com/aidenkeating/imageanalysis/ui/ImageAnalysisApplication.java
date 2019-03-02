@@ -106,7 +106,7 @@ public class ImageAnalysisApplication extends Application {
 		});
 		return button;
 	}
-	
+
 	/**
 	 * Create a button for exporting an image analysis report.
 	 */
@@ -117,7 +117,7 @@ public class ImageAnalysisApplication extends Application {
 			public void handle(ActionEvent event) {
 				if (file != null) {
 					final File dir = dirChooser.showDialog(stage);
-					if (dir != null ) {
+					if (dir != null) {
 						try {
 							final BufferedImage image = ImageIO.read(file);
 							final ImageAnalysisReport report = imageAnalyzer.compileReport(image);
@@ -128,7 +128,7 @@ public class ImageAnalysisApplication extends Application {
 					}
 				}
 			}
-			
+
 		});
 		return button;
 	}
@@ -198,8 +198,9 @@ public class ImageAnalysisApplication extends Application {
 		final Image image = SwingFXUtils.toFXImage(report.getOutlinedImage(), null);
 		imageView.setImage(image);
 	}
-	
-	private void exportAnalysisReportToFile(final ImageAnalysisReport report, final String exportDir) throws IOException {
+
+	private void exportAnalysisReportToFile(final ImageAnalysisReport report, final String exportDir)
+			throws IOException {
 		ImageAnalyzer.exportReportToFile(report, exportDir);
 	}
 
