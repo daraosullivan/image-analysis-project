@@ -30,6 +30,13 @@ public abstract class ImageUtil {
 		return copy;
 	}
 
+	public static Pixel scalePixel(final Pixel pixel, final Dimension originalDimensions,
+			final Dimension newDimension) {
+		final int scaledX = (int) ((pixel.getX() / originalDimensions.getWidth()) * newDimension.getWidth());
+		final int scaledY = (int) ((pixel.getY() / originalDimensions.getHeight()) * newDimension.getHeight());
+		return new Pixel(scaledX, scaledY);
+	}
+
 	private static Dimension getScaledDimension(Dimension imageSize, Dimension boundary) {
 		double widthRatio = boundary.getWidth() / imageSize.getWidth();
 		double heightRatio = boundary.getHeight() / imageSize.getHeight();

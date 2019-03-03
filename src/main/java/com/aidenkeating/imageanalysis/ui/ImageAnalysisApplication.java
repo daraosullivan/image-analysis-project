@@ -1,6 +1,7 @@
 package com.aidenkeating.imageanalysis.ui;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -41,7 +42,7 @@ public class ImageAnalysisApplication extends Application {
 	public void start(Stage primaryStage) {
 		this.binaryImageFactory = new GrayscaleBinaryImageFactory(130);
 		this.imageAnalyzer = new ImageAnalyzer.Builder().withBinaryImageFactory(this.binaryImageFactory)
-				.withOutlineColor(Color.RED).build();
+				.withResizeDimension(new Dimension(500, 200)).withOutlineColor(Color.RED).build();
 
 		final BorderPane mainPane = new BorderPane();
 

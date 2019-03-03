@@ -34,6 +34,9 @@ import com.aidenkeating.imageanalysis.util.UnionFind;
  * over time, we use the builder pattern to help the end-user keep a clean code
  * base and also make our own lives easier.
  * 
+ * Note that although the image can be resized to improve efficiency, this will
+ * reduce the accuracy of the image analysis.
+ * 
  * We could have also provided a "config object" as a single parameter if we
  * wanted.
  * 
@@ -67,18 +70,23 @@ public class ImageAnalyzer {
 		// we can modify.
 		final BufferedImage mutableImageCopy = ImageUtil.deepCopy(image);
 		// If resizeImage is not set then use the original image.
-		// final BufferedImage resizedImage = (this.resizeDimension != null ?
-		// ImageUtil.scaleImage(mutableImageCopy, this.resizeDimension) :
-		// mutableImageCopy);
+		final BufferedImage resizedImage = (this.resizeDimension != null
+				? ImageUtil.scaleImage(mutableImageCopy, this.resizeDimension)
+				: mutableImageCopy);
 		// Produce an image with only two distinct colors, black and white.
-		final BufferedImage binaryImage = this.binaryImageFactory.produceBinaryImage(image);
+		final BufferedImage binaryImage = this.binaryImageFactory.produceBinaryImage(resizedImage);
 		// Retrieve a list of object groupings from the binary image.
 		final List<ImageGrouping> groupings = findDistinctObjectsInImage(binaryImage);
 		// Outline the groupings in the original color image and return it.
+		final Dimension resizeImageDimensions = new Dimension(resizedImage.getWidth(), resizedImage.getHeight());
 		for (final ImageGrouping grouping : groupings) {
-			grouping.applyToImage(mutableImageCopy, this.outlineColor);
+			if (this.resizeDimension != null) {
+				grouping.applyScaledToImage(mutableImageCopy, this.outlineColor, resizeImageDimensions);
+			} else {
+				grouping.applyToImage(mutableImageCopy, this.outlineColor);
+			}
 		}
-		return new ImageAnalysisReport(image, binaryImage, mutableImageCopy, groupings);
+		return new ImageAnalysisReport(image, resizedImage, binaryImage, mutableImageCopy, groupings);
 	}
 
 	/**
@@ -94,6 +102,9 @@ public class ImageAnalyzer {
 		final File originalFile = new File(outputDir + "/original.png");
 		ImageIO.write(report.getOriginalImage(), "png", originalFile);
 		// Save binary color file
+		final File resizedFile = new File(outputDir + "/resized.png");
+		ImageIO.write(report.getResizedImage(), "png", resizedFile);
+		// Save binary color file
 		final File binaryColorFile = new File(outputDir + "/binary.png");
 		ImageIO.write(report.getBinaryImage(), "png", binaryColorFile);
 		// Save outlined file
@@ -104,8 +115,9 @@ public class ImageAnalyzer {
 				String.format("* Distict Objects Detected: %s", report.getDistinctObjectCount()),
 				String.format("* Image Width: %s", report.getOriginalImage().getWidth()),
 				String.format("* Image Height: %s", report.getOriginalImage().getHeight()), "## Images",
-				"### Original Image", "![Original Image](./original.png)", "### Binary Image",
-				"![Binary Image](./binary.png)", "### Outlined Image", "![Outlined Image](./outlined.png)");
+				"### Original Image", "![Original Image](./original.png)", "### Resized Image",
+				"![Resized Image](./resized.png)", "### Binary Image", "![Binary Image](./binary.png)",
+				"### Outlined Image", "![Outlined Image](./outlined.png)");
 		final Path file = Paths.get(outputDir, "report.md");
 		Files.write(file, lines, Charset.forName("UTF-8"));
 	}
@@ -130,9 +142,6 @@ public class ImageAnalyzer {
 			for (int col = 0; col < image.getWidth(); col++) {
 				// Store some commonly used information about the pixel.
 				final int pixelRGB = image.getRGB(col, row);
-				if (pixelRGB != Color.BLACK.getRGB() && pixelRGB != Color.WHITE.getRGB()) {
-					System.out.println("Woop " + col + "," + row);
-				}
 				final int nCols = image.getWidth();
 				final int nRows = image.getHeight();
 				final int pixelId = getId(row, col, nCols);

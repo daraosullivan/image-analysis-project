@@ -13,13 +13,16 @@ import com.aidenkeating.imageanalysis.image.ImageGrouping;
  */
 public class ImageAnalysisReport {
 	private final BufferedImage originalImage;
+	private final BufferedImage resizedImage;
 	private final BufferedImage binaryImage;
 	private final BufferedImage outlinedImage;
 	private final List<ImageGrouping> disinctObjectGroupings;
 
-	public ImageAnalysisReport(final BufferedImage originalImage, final BufferedImage binaryImage,
-			final BufferedImage outlinedImage, final List<ImageGrouping> disinctObjectGroupings) {
+	public ImageAnalysisReport(final BufferedImage originalImage, final BufferedImage resizedImage,
+			final BufferedImage binaryImage, final BufferedImage outlinedImage,
+			final List<ImageGrouping> disinctObjectGroupings) {
 		this.originalImage = originalImage;
+		this.resizedImage = resizedImage;
 		this.binaryImage = binaryImage;
 		this.outlinedImage = outlinedImage;
 		this.disinctObjectGroupings = disinctObjectGroupings;
@@ -28,6 +31,10 @@ public class ImageAnalysisReport {
 	// Generated.
 	public BufferedImage getOriginalImage() {
 		return originalImage;
+	}
+
+	public BufferedImage getResizedImage() {
+		return resizedImage;
 	}
 
 	// Generated.
