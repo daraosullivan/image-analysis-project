@@ -15,14 +15,19 @@ public interface BinaryImageFactory {
 	 * 
 	 * @return The primary color of the produced binary image.
 	 */
-	public Color primaryColor();
+	Color primaryColor();
 
 	/**
 	 * Retrieve the secondary color for the binary image that can be produced.
 	 * 
 	 * @return The secondary color of the produced binary image.
 	 */
-	public Color secondaryColor();
+	Color secondaryColor();
+
+	/**
+	 * Set the threshold for the factory.
+	 */
+	void setThreshold(int threshold);
 
 	/**
 	 * Retrieve a binary representation of the image, taking into account the
@@ -30,5 +35,5 @@ public interface BinaryImageFactory {
 	 * 
 	 * @return Binary representation of the image.
 	 */
-	public BufferedImage produceBinaryImage(BufferedImage image);
+	BufferedImage produceBinaryImage(BufferedImage image);
 }

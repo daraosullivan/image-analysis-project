@@ -3,7 +3,8 @@ package com.aidenkeating.imageanalysis;
 import java.awt.image.BufferedImage;
 import java.util.List;
 
-import com.aidenkeating.imageanalysis.image.ImageGrouping;
+import com.aidenkeating.imageanalysis.config.Config;
+import com.aidenkeating.imageanalysis.grouping.ImageGrouping;
 
 /**
  * Full report of the image analysis process, containing all information about
@@ -12,22 +13,31 @@ import com.aidenkeating.imageanalysis.image.ImageGrouping;
  * @author aidenkeating
  */
 public class ImageAnalysisReport {
+	private final Config config;
 	private final BufferedImage originalImage;
 	private final BufferedImage resizedImage;
 	private final BufferedImage binaryImage;
 	private final BufferedImage outlinedImage;
-	private final List<ImageGrouping> disinctObjectGroupings;
+	private final List<ImageGrouping> members;
+	private final List<ImageGrouping> swarms;
 
-	public ImageAnalysisReport(final BufferedImage originalImage, final BufferedImage resizedImage,
-			final BufferedImage binaryImage, final BufferedImage outlinedImage,
-			final List<ImageGrouping> disinctObjectGroupings) {
+	public ImageAnalysisReport(final Config config, final BufferedImage originalImage, final BufferedImage resizedImage,
+			final BufferedImage binaryImage, final BufferedImage outlinedImage, final List<ImageGrouping> members,
+			final List<ImageGrouping> swarms) {
+		this.config = config;
 		this.originalImage = originalImage;
 		this.resizedImage = resizedImage;
 		this.binaryImage = binaryImage;
 		this.outlinedImage = outlinedImage;
-		this.disinctObjectGroupings = disinctObjectGroupings;
+		this.members = members;
+		this.swarms = swarms;
 	}
 
+	// Generated.
+	public Config getConfig() {
+		return config;
+	}
+	
 	// Generated.
 	public BufferedImage getOriginalImage() {
 		return originalImage;
@@ -48,12 +58,20 @@ public class ImageAnalysisReport {
 	}
 
 	// Generated.
-	public int getDistinctObjectCount() {
-		return disinctObjectGroupings.size();
+	public List<ImageGrouping> getMembers() {
+		return members;
 	}
-
+	
 	// Generated.
-	public List<ImageGrouping> getDisinctObjectGroupings() {
-		return disinctObjectGroupings;
+	public List<ImageGrouping> getSwarms() {
+		return swarms;
+	}
+	
+	public int getMembersCount() {
+		return this.members.size();
+	}
+	
+	public int getSwarmsCount() {
+		return this.swarms.size();
 	}
 }

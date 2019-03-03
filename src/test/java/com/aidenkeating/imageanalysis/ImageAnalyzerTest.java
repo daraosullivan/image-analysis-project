@@ -2,7 +2,6 @@ package com.aidenkeating.imageanalysis;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +11,10 @@ import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.aidenkeating.imageanalysis.config.Config;
+import com.aidenkeating.imageanalysis.config.ImageResizeConfig;
+import com.aidenkeating.imageanalysis.config.MemberAnalysisConfig;
+import com.aidenkeating.imageanalysis.config.SwarmAnalysisConfig;
 import com.aidenkeating.imageanalysis.image.BinaryImageFactory;
 import com.aidenkeating.imageanalysis.image.GrayscaleBinaryImageFactory;
 
@@ -26,33 +29,31 @@ import com.aidenkeating.imageanalysis.image.GrayscaleBinaryImageFactory;
  *
  */
 class ImageAnalyzerTest {
-	private BinaryImageFactory binaryImageFactory;
 	private ImageAnalyzer imageAnalyzer;
 
 	@BeforeEach
 	void setUp() throws Exception {
-		this.binaryImageFactory = new GrayscaleBinaryImageFactory(130);
-		this.imageAnalyzer = new ImageAnalyzer.Builder().withBinaryImageFactory(this.binaryImageFactory)
-				.withOutlineColor(Color.RED).build();
+		final Config config = new Config(new MemberAnalysisConfig(true), new SwarmAnalysisConfig(true),
+				new ImageResizeConfig(true));
+		final BinaryImageFactory binaryImageFactory = new GrayscaleBinaryImageFactory(130);
+		this.imageAnalyzer = new ImageAnalyzer(binaryImageFactory, config);
 	}
 
 	@Test
 	void testNineBirds() throws IOException {
 		// ClassLoader classLoader = getClass().getClassLoader();
 		File file = new File("src/test/resources/birds_1.jpg");
-		System.out.println(file.getAbsolutePath());
 		BufferedImage image = ImageIO.read(file);
 		ImageAnalysisReport report = this.imageAnalyzer.compileReport(image);
-		assertEquals(report.getDistinctObjectCount(), 9);
+		assertEquals(report.getMembersCount(), 9);
 	}
 
 	@Test
 	void testOneBird() throws IOException {
 		// ClassLoader classLoader = getClass().getClassLoader();
 		File file = new File("src/test/resources/birds_2.jpg");
-		System.out.println(file.getAbsolutePath());
 		BufferedImage image = ImageIO.read(file);
 		ImageAnalysisReport report = this.imageAnalyzer.compileReport(image);
-		assertEquals(report.getDistinctObjectCount(), 1);
+		assertEquals(report.getMembersCount(), 1);
 	}
 }

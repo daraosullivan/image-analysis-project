@@ -1,4 +1,4 @@
-package com.aidenkeating.imageanalysis.image;
+package com.aidenkeating.imageanalysis.grouping;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -6,27 +6,32 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.List;
 
-/**
- * Class to define a grouping that can also project itself onto an image.
- * 
- * @author aidenkeating
- *
- */
-public class FirstLastPixelImageGrouping implements ImageGrouping {
+import com.aidenkeating.imageanalysis.geometry.Point;
+import com.aidenkeating.imageanalysis.geometry.Rectangle;
+import com.aidenkeating.imageanalysis.image.ImageUtil;
+import com.aidenkeating.imageanalysis.image.Pixel;
+
+public class MemberGrouping implements ImageGrouping {
 	private Pixel firstPixel;
 	private Pixel lastPixel;
 
-	public FirstLastPixelImageGrouping(final List<Pixel> pixels) {
-		final Pixel firstPixel = pixels.get(0);
-		final Pixel lastPixel = pixels.get(pixels.size() - 1);
+	public MemberGrouping(final List<Pixel> pixels) {
+		final Pixel topmostPixel = pixels.get(0);
+		final Pixel bottommostPixel = pixels.get(pixels.size() - 1);
+		Pixel leftmostPixel = topmostPixel;
+		Pixel rightmostPixel = topmostPixel;
 
-		if (lastPixel.getX() < firstPixel.getX()) {
-			final int tempX = firstPixel.getX();
-			firstPixel.setX(lastPixel.getX());
-			lastPixel.setX(tempX);
+		for (final Pixel pixel : pixels) {
+			if (pixel.getX() < leftmostPixel.getX()) {
+				leftmostPixel = pixel;
+			}
+			if (pixel.getX() > rightmostPixel.getX()) {
+				rightmostPixel = pixel;
+			}
 		}
-		this.firstPixel = firstPixel;
-		this.lastPixel = lastPixel;
+
+		this.firstPixel = new Pixel(leftmostPixel.getX(), topmostPixel.getY());
+		this.lastPixel = new Pixel(rightmostPixel.getX(), bottommostPixel.getY());
 	}
 
 	@Override
@@ -54,4 +59,17 @@ public class FirstLastPixelImageGrouping implements ImageGrouping {
 		graphs.drawRect(scaledFirstPixel.getX(), scaledFirstPixel.getY(), outlineWidth, outlineHeight);
 		graphs.dispose();
 	}
+
+	@Override
+	public Rectangle getOutlineRect() {
+		final int rectWidth = this.lastPixel.getX() - this.firstPixel.getX();
+		final int rectHeight = this.lastPixel.getY() - this.firstPixel.getY();
+		return new Rectangle(new Point(this.firstPixel.getX(), this.firstPixel.getY()), rectWidth, rectHeight);
+	}
+
+	@Override
+	public double distanceTo(final ImageGrouping grouping) {
+		return this.getOutlineRect().distanceTo(grouping.getOutlineRect());
+	}
+
 }

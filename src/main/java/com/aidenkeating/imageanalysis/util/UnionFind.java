@@ -47,14 +47,15 @@ public class UnionFind {
 		 * Here we use weighting to keep the tree flat. The smaller tree is merged to
 		 * the large one A flat tree has a faster find root time
 		 */
-		if (sz[i] < sz[j]) {
-			id[i] = j;
-			sz[j] += sz[i];
-		} else {
-			id[j] = i;
-			sz[i] += sz[j];
+		if (i != j) {
+			if (sz[i] < sz[j]) {
+				id[i] = j;
+				sz[j] += sz[i];
+			} else {
+				id[j] = i;
+				sz[i] += sz[j];
+			}
 		}
-
 	}
 
 	public boolean connected(int p, int q) {

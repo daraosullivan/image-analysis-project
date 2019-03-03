@@ -1,7 +1,5 @@
 package com.aidenkeating.imageanalysis.ui;
 
-import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +8,11 @@ import javax.imageio.ImageIO;
 
 import com.aidenkeating.imageanalysis.ImageAnalysisReport;
 import com.aidenkeating.imageanalysis.ImageAnalyzer;
+import com.aidenkeating.imageanalysis.config.Config;
+import com.aidenkeating.imageanalysis.config.ImageResizeConfig;
+import com.aidenkeating.imageanalysis.config.MemberAnalysisConfig;
+import com.aidenkeating.imageanalysis.config.SwarmAnalysisConfig;
+import com.aidenkeating.imageanalysis.image.BinaryImageFactory;
 import com.aidenkeating.imageanalysis.image.GrayscaleBinaryImageFactory;
 
 import javafx.application.Application;
@@ -33,16 +36,17 @@ import javafx.stage.Stage;
 public class ImageAnalysisApplication extends Application {
 	private final FileChooser fileChooser = new FileChooser();
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
-	private File file;
+	private BufferedImage image;
+
 	private ImageView imageView = new ImageView();
-	private GrayscaleBinaryImageFactory binaryImageFactory;
 	private ImageAnalyzer imageAnalyzer;
 
 	@Override
 	public void start(Stage primaryStage) {
-		this.binaryImageFactory = new GrayscaleBinaryImageFactory(130);
-		this.imageAnalyzer = new ImageAnalyzer.Builder().withBinaryImageFactory(this.binaryImageFactory)
-				.withResizeDimension(new Dimension(500, 200)).withOutlineColor(Color.RED).build();
+		final Config config = new Config(new MemberAnalysisConfig(true), new SwarmAnalysisConfig(true),
+				new ImageResizeConfig(true));
+		final BinaryImageFactory binaryImageFactory = new GrayscaleBinaryImageFactory(130);
+		this.imageAnalyzer = new ImageAnalyzer(binaryImageFactory, config);
 
 		final BorderPane mainPane = new BorderPane();
 
@@ -81,7 +85,7 @@ public class ImageAnalysisApplication extends Application {
 
 		// Open the dialog immediately if a file isn't selected (which it
 		// probably won't be).
-		if (file == null) {
+		if (image == null) {
 			imageSelectButton.fire();
 		}
 	}
@@ -97,8 +101,8 @@ public class ImageAnalysisApplication extends Application {
 				final File imageFile = fileChooser.showOpenDialog(stage);
 				if (imageFile != null) {
 					try {
-						file = imageFile;
-						setImageViewFromFile(imageFile);
+						image = ImageIO.read(imageFile);
+						refreshWithImage(image);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -116,11 +120,10 @@ public class ImageAnalysisApplication extends Application {
 		button.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				if (file != null) {
+				if (image != null) {
 					final File dir = dirChooser.showDialog(stage);
 					if (dir != null) {
 						try {
-							final BufferedImage image = ImageIO.read(file);
 							final ImageAnalysisReport report = imageAnalyzer.compileReport(image);
 							exportAnalysisReportToFile(report, dir.getAbsolutePath());
 						} catch (IOException e) {
@@ -139,9 +142,9 @@ public class ImageAnalysisApplication extends Application {
 		slider.valueProperty().addListener(new ChangeListener<Number>() {
 			@Override
 			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-				binaryImageFactory.setThreshold(newValue.intValue());
+				imageAnalyzer.getBinaryImageFactory().setThreshold(newValue.intValue());
 				try {
-					setImageViewFromFile(file);
+					refreshWithImage(image);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -157,9 +160,9 @@ public class ImageAnalysisApplication extends Application {
 		slider.valueProperty().addListener(new ChangeListener<Number>() {
 			@Override
 			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-				imageAnalyzer.setNoiseReduction(newValue.intValue());
+				imageAnalyzer.getConfig().getMemberConfig().setNoiseReduction(newValue.intValue());
 				try {
-					setImageViewFromFile(file);
+					refreshWithImage(image);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -191,13 +194,11 @@ public class ImageAnalysisApplication extends Application {
 	 * @param file The file to load
 	 * @throws IOException
 	 */
-	private void setImageViewFromFile(final File file) throws IOException {
-		final BufferedImage bufferedImage = ImageIO.read(file);
+	private void refreshWithImage(final BufferedImage image) throws IOException {
+		final ImageAnalysisReport report = this.imageAnalyzer.compileReport(image);
 
-		final ImageAnalysisReport report = this.imageAnalyzer.compileReport(bufferedImage);
-
-		final Image image = SwingFXUtils.toFXImage(report.getOutlinedImage(), null);
-		imageView.setImage(image);
+		final Image renderableImage = SwingFXUtils.toFXImage(report.getOutlinedImage(), null);
+		imageView.setImage(renderableImage);
 	}
 
 	private void exportAnalysisReportToFile(final ImageAnalysisReport report, final String exportDir)

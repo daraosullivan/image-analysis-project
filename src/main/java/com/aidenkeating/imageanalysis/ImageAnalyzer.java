@@ -15,11 +15,11 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import com.aidenkeating.imageanalysis.config.Config;
+import com.aidenkeating.imageanalysis.grouping.ImageGrouping;
+import com.aidenkeating.imageanalysis.grouping.MemberGrouping;
+import com.aidenkeating.imageanalysis.grouping.SwarmGrouping;
 import com.aidenkeating.imageanalysis.image.BinaryImageFactory;
-import com.aidenkeating.imageanalysis.image.CompleteOutlineImageGrouping;
-// import com.aidenkeating.imageanalysis.image.FirstLastPixelImageGrouping;
-import com.aidenkeating.imageanalysis.image.GrayscaleBinaryImageFactory;
-import com.aidenkeating.imageanalysis.image.ImageGrouping;
 import com.aidenkeating.imageanalysis.image.ImageUtil;
 import com.aidenkeating.imageanalysis.image.Pixel;
 import com.aidenkeating.imageanalysis.util.UnionFind;
@@ -45,17 +45,11 @@ import com.aidenkeating.imageanalysis.util.UnionFind;
  */
 public class ImageAnalyzer {
 	private BinaryImageFactory binaryImageFactory;
-	private Color outlineColor;
-	private int noiseReduction;
-	// This is nullable, when null do not resize the image.
-	private Dimension resizeDimension;
+	private Config config;
 
-	public ImageAnalyzer(final BinaryImageFactory binaryImageFactory, final Color outlineColor,
-			final int noiseReduction, final Dimension resizeDimension) {
+	public ImageAnalyzer(final BinaryImageFactory binaryImageFactory, final Config config) {
 		this.binaryImageFactory = binaryImageFactory;
-		this.outlineColor = outlineColor;
-		this.noiseReduction = (noiseReduction > 1 ? noiseReduction : 1);
-		this.resizeDimension = resizeDimension;
+		this.config = config;
 	}
 
 	/**
@@ -70,23 +64,46 @@ public class ImageAnalyzer {
 		// we can modify.
 		final BufferedImage mutableImageCopy = ImageUtil.deepCopy(image);
 		// If resizeImage is not set then use the original image.
-		final BufferedImage resizedImage = (this.resizeDimension != null
-				? ImageUtil.scaleImage(mutableImageCopy, this.resizeDimension)
+		final BufferedImage resizedImage = (this.config.getResizeConfig().isEnabled()
+				? ImageUtil.scaleImage(mutableImageCopy, this.config.getResizeConfig().getResizeBounds())
 				: mutableImageCopy);
 		// Produce an image with only two distinct colors, black and white.
 		final BufferedImage binaryImage = this.binaryImageFactory.produceBinaryImage(resizedImage);
+
 		// Retrieve a list of object groupings from the binary image.
 		final List<ImageGrouping> groupings = findDistinctObjectsInImage(binaryImage);
-		// Outline the groupings in the original color image and return it.
 		final Dimension resizeImageDimensions = new Dimension(resizedImage.getWidth(), resizedImage.getHeight());
-		for (final ImageGrouping grouping : groupings) {
-			if (this.resizeDimension != null) {
-				grouping.applyScaledToImage(mutableImageCopy, this.outlineColor, resizeImageDimensions);
-			} else {
-				grouping.applyToImage(mutableImageCopy, this.outlineColor);
+
+		// Retrieve all groups of groupings, we'll call these swarms for lack
+		// of a better word.
+		// Outline the groupings in the original color image and return it.
+		if (this.config.getMemberConfig().isEnabled()) {
+			for (final ImageGrouping grouping : groupings) {
+				final Color memberOutlineColor = this.config.getMemberConfig().getOutlineColor();
+				if (this.config.getResizeConfig().isEnabled()) {
+					grouping.applyScaledToImage(mutableImageCopy, memberOutlineColor, resizeImageDimensions);
+				} else {
+					grouping.applyToImage(mutableImageCopy, memberOutlineColor);
+				}
 			}
 		}
-		return new ImageAnalysisReport(image, resizedImage, binaryImage, mutableImageCopy, groupings);
+		// Do the same, but now with members instead of pixels, to find swarms
+		// of birds.
+		List<ImageGrouping> swarms = new ArrayList<ImageGrouping>(0);
+		if (this.config.getSwarmConfig().isEnabled()) {
+			swarms = findSwarmsOfGroupings(groupings,
+					this.config.getSwarmConfig().getMemberDistanceThreshold());
+			for (final ImageGrouping swarm : swarms) {
+				final Color swarmOutlineColor = this.config.getSwarmConfig().getOutlineColor();
+				if (this.config.getResizeConfig().isEnabled()) {
+					swarm.applyScaledToImage(mutableImageCopy, swarmOutlineColor, resizeImageDimensions);
+				} else {
+					swarm.applyToImage(mutableImageCopy, swarmOutlineColor);
+				}
+			}
+		}
+		return new ImageAnalysisReport(this.config, image, resizedImage, binaryImage, mutableImageCopy, groupings,
+				swarms);
 	}
 
 	/**
@@ -112,7 +129,11 @@ public class ImageAnalyzer {
 		ImageIO.write(report.getOutlinedImage(), "png", outlineFile);
 
 		final List<String> lines = Arrays.asList("# Image Analysis Report", "## Metadata",
-				String.format("* Distict Objects Detected: %s", report.getDistinctObjectCount()),
+				String.format("* Member Detection Enabled: %s", report.getConfig().getMemberConfig().isEnabled()),
+				String.format("* Members Detected: %s",
+						(report.getConfig().getMemberConfig().isEnabled() ? report.getMembersCount() : 0)),
+				String.format("* Swarm Detection Enabled: %s", report.getConfig().getSwarmConfig().isEnabled()),
+				String.format("* Swarms Detected: %s", report.getSwarmsCount()),
 				String.format("* Image Width: %s", report.getOriginalImage().getWidth()),
 				String.format("* Image Height: %s", report.getOriginalImage().getHeight()), "## Images",
 				"### Original Image", "![Original Image](./original.png)", "### Resized Image",
@@ -185,8 +206,8 @@ public class ImageAnalyzer {
 			}
 		}
 
-		List<ImageGrouping> imageGroupings = new ArrayList<ImageGrouping>();
-		for (int root : uf.getRoots(this.noiseReduction)) {
+		final List<ImageGrouping> imageGroupings = new ArrayList<ImageGrouping>();
+		for (int root : uf.getRoots(this.config.getMemberConfig().getNoiseReduction())) {
 			final List<Pixel> pixels = new ArrayList<Pixel>();
 
 			final List<Integer> treeElements = uf.getElementsOfTree(root);
@@ -197,10 +218,41 @@ public class ImageAnalyzer {
 			// Uncomment/comment these lines to switch between the two types of
 			// pixel grouping implementations.
 			// imageGroupings.add(new FirstLastPixelImageGrouping(pixels));
-			imageGroupings.add(new CompleteOutlineImageGrouping(pixels));
+			imageGroupings.add(new MemberGrouping(pixels));
 		}
 
 		return imageGroupings;
+	}
+
+	/**
+	 * Find all sets of grouped members within an image.
+	 * 
+	 * @param groupings The members to compare
+	 * @param threshold The maximum distance between two members to be considered in
+	 *                  the same swarm
+	 * @return All swarms in the image
+	 */
+	private List<ImageGrouping> findSwarmsOfGroupings(final List<ImageGrouping> groupings, final double threshold) {
+		final UnionFind uf = new UnionFind(groupings.size());
+		for (int i = 0; i < groupings.size(); i++) {
+			for (int j = i + 1; j < groupings.size(); j++) {
+				if (groupings.get(i).distanceTo(groupings.get(j)) < threshold) {
+					uf.union(i, j);
+				}
+			}
+		}
+
+		final List<ImageGrouping> swarms = new ArrayList<ImageGrouping>();
+		for (final int root : uf.getRoots(1)) {
+			final List<ImageGrouping> swarmMembers = new ArrayList<ImageGrouping>();
+
+			final List<Integer> treeElements = uf.getElementsOfTree(root);
+			for (final int groupingId : treeElements) {
+				swarmMembers.add(groupings.get(groupingId));
+			}
+			swarms.add(new SwarmGrouping(swarmMembers));
+		}
+		return swarms;
 	}
 
 	// Generated.
@@ -209,89 +261,23 @@ public class ImageAnalyzer {
 	}
 
 	// Generated.
-	public Color getOutlineColor() {
-		return outlineColor;
-	}
-
-	// Generated.
-	public int getNoiseReduction() {
-		return noiseReduction;
-	}
-
-	// Generated.
-	public Dimension getResizeDimension() {
-		return resizeDimension;
-	}
-
-	// Generated.
 	public void setBinaryImageFactory(final BinaryImageFactory binaryImageFactory) {
 		this.binaryImageFactory = binaryImageFactory;
 	}
 
 	// Generated.
-	public void setOutlineColor(final Color outlineColor) {
-		this.outlineColor = outlineColor;
+	public Config getConfig() {
+		return this.config;
 	}
 
 	// Generated.
-	public void setNoiseReduction(final int noiseReduction) {
-		this.noiseReduction = noiseReduction;
-	}
-
-	// Generated.
-	public void setResizeDimension(final Dimension resizeDimension) {
-		this.resizeDimension = resizeDimension;
+	public void setConfig(final Config config) {
+		this.config = config;
 	}
 
 	// Utility function for retrieving the correct array position in a
 	// QuickUnionFind for a specific pixel in an image with nCols columns.
 	private static int getId(final int row, final int col, final int nCols) {
 		return row * nCols + col;
-	}
-
-	/**
-	 * Builder for ImageAnalyzer (Builder pattern).
-	 * 
-	 * @author aidenkeating
-	 */
-	public static class Builder {
-		private BinaryImageFactory binaryImageFactory;
-		private Color outlineColor;
-		private int noiseReduction;
-		private Dimension resizeDimension;
-
-		public Builder() {
-			this.binaryImageFactory = new GrayscaleBinaryImageFactory(130);
-			this.outlineColor = Color.BLUE;
-			this.noiseReduction = 1;
-			// When set to null, images will not be resized before they are
-			// analyzed.
-			this.resizeDimension = null;
-		}
-
-		public Builder withBinaryImageFactory(final BinaryImageFactory factory) {
-			this.binaryImageFactory = factory;
-			return this;
-		}
-
-		public Builder withOutlineColor(final Color outlineColor) {
-			this.outlineColor = outlineColor;
-			return this;
-		}
-
-		public Builder withNoiseReduction(final int noiseReduction) {
-			this.noiseReduction = noiseReduction;
-			return this;
-		}
-
-		public Builder withResizeDimension(final Dimension resizeDimension) {
-			this.resizeDimension = resizeDimension;
-			return this;
-		}
-
-		public ImageAnalyzer build() {
-			return new ImageAnalyzer(this.binaryImageFactory, this.outlineColor, this.noiseReduction,
-					this.resizeDimension);
-		}
 	}
 }

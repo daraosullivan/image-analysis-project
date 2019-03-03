@@ -1,8 +1,10 @@
-package com.aidenkeating.imageanalysis.image;
+package com.aidenkeating.imageanalysis.grouping;
 
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
+
+import com.aidenkeating.imageanalysis.geometry.Rectangle;
 
 /**
  * Representation of a distinct object within an image.
@@ -10,6 +12,13 @@ import java.awt.image.BufferedImage;
  * @author aidenkeating
  */
 public interface ImageGrouping {
+	/**
+	 * Retrieve the outline of the grouping represented as a rectangle.
+	 * 
+	 * @return The rectangle of the outline
+	 */
+	public Rectangle getOutlineRect();
+
 	/**
 	 * Draw the image grouping onto a provided image, scaled from the dimensions of
 	 * another image.
@@ -33,4 +42,12 @@ public interface ImageGrouping {
 	 *                           grouping originates
 	 */
 	public void applyScaledToImage(BufferedImage image, Color lineColor, Dimension originalDimensions);
+
+	/**
+	 * The distance between the outline of this grouping and the outline of another
+	 * grouping.
+	 * 
+	 * @param grouping
+	 */
+	public double distanceTo(ImageGrouping grouping);
 }
