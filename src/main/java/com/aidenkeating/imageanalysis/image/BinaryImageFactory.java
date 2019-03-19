@@ -25,11 +25,6 @@ public interface BinaryImageFactory {
 	Color secondaryColor();
 
 	/**
-	 * Set the threshold for the factory.
-	 */
-	void setThreshold(int threshold);
-
-	/**
 	 * Retrieve a binary representation of the image, taking into account the
 	 * threshold.
 	 * 

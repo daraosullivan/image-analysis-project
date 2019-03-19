@@ -13,7 +13,7 @@ import com.aidenkeating.imageanalysis.config.ImageResizeConfig;
 import com.aidenkeating.imageanalysis.config.MemberAnalysisConfig;
 import com.aidenkeating.imageanalysis.config.SwarmAnalysisConfig;
 import com.aidenkeating.imageanalysis.image.BinaryImageFactory;
-import com.aidenkeating.imageanalysis.image.GrayscaleBinaryImageFactory;
+import com.aidenkeating.imageanalysis.image.BlackAndWhite;
 
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
@@ -45,7 +45,7 @@ public class ImageAnalysisApplication extends Application {
 	public void start(Stage primaryStage) {
 		final Config config = new Config(new MemberAnalysisConfig(true), new SwarmAnalysisConfig(true),
 				new ImageResizeConfig(true));
-		final BinaryImageFactory binaryImageFactory = new GrayscaleBinaryImageFactory(130);
+		final BinaryImageFactory binaryImageFactory = new BlackAndWhite();
 		this.imageAnalyzer = new ImageAnalyzer(binaryImageFactory, config);
 
 		final BorderPane mainPane = new BorderPane();
@@ -142,7 +142,6 @@ public class ImageAnalysisApplication extends Application {
 		slider.valueProperty().addListener(new ChangeListener<Number>() {
 			@Override
 			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-				imageAnalyzer.getBinaryImageFactory().setThreshold(newValue.intValue());
 				try {
 					refreshWithImage(image);
 				} catch (IOException e) {
